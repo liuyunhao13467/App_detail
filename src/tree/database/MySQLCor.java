@@ -24,7 +24,8 @@ public class MySQLCor {
 	public Connection getCon(){
 		String dbDriver = "com.mysql.jdbc.Driver";	
 		String dbUserName = "root";
-		String dbPassword = "ly123456789";
+//		String dbPassword = "ly123456789";
+		String dbPassword = "asd123";
 		try {
 			Class.forName(dbDriver);
 			con = DriverManager.getConnection(dbUrl,dbUserName,dbPassword);
@@ -39,7 +40,7 @@ public class MySQLCor {
 	}
 	
 	public void ExceptionLog(Exception e){
-	    StringBuffer write = new StringBuffer("F:\\app_detail\\exception.txt");
+	    StringBuffer write = new StringBuffer("E:\\apk\\apk_detail_string\\exception.txt");
 		try {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(new File(write.toString()),true));
 

@@ -18,7 +18,7 @@ public class Top {
 		BufferedWriter writer = null;
 		
 		try {						
-			StringBuffer write = new StringBuffer("F:\\app_detail\\luanma.txt");
+			StringBuffer write = new StringBuffer("E:\\apk\\apk_detail_string\\luanma.txt");
 			writer= new BufferedWriter(new FileWriter(new File(write.toString()),true));
 			
 			StringBuffer path = new StringBuffer("E:\\apk\\apk6000");                  //------------daiding   			
@@ -108,7 +108,7 @@ public class Top {
 							+ "th APK parsed successuful..........................");					
 					j++;				
 
-				    StringBuffer write1 = new StringBuffer("F:\\app_detail\\exception.txt");
+				    StringBuffer write1 = new StringBuffer("E:\\apk\\apk_detail_string\\exception.txt");
 					try {
 
 						BufferedWriter writer1 = new BufferedWriter(new FileWriter(new File(write1.toString()),true));
