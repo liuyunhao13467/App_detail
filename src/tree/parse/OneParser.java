@@ -107,12 +107,14 @@ public class OneParser {
 			File f = it.next();	
 			
 			try {
+				System.out.println("1st while ,file is : " + f.getName());
 				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
 				StringBuffer line = new StringBuffer();
 				StringBuffer classsig = new StringBuffer(),
 						packagename = new StringBuffer();
 				String linestr = "";
 				while((linestr = br.readLine()) != null){
+					System.out.println("2 while : " + linestr);
 					line = new StringBuffer(linestr);
 					line.trimToSize();
 					
@@ -177,6 +179,7 @@ public class OneParser {
 						while((!((linestr = ((br.readLine()).trim())).equals(".end method"))) && (linestr != null)){
 							
 							line = new StringBuffer(linestr);
+							System.out.println("2.2 while : " + line);
 							line.trimToSize();
 
 							StringBuffer invokemethodsig = new StringBuffer();

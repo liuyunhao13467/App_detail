@@ -459,7 +459,7 @@ public class MySQLCor {
 			prestmt.setString(4, string3);
 			
 			prestmt.executeUpdate();
-			System.out.println("insert successful~");
+			System.out.println(string + "insert successful~");
 	
 		} catch (SQLException e) {
 			ExceptionLog(e);
@@ -563,7 +563,7 @@ public class MySQLCor {
 
 			
 			prestmt.executeUpdate();
-			System.out.println("insert successful~");
+			System.out.println(returntype+": " + "insert successful~");
 	
 		} catch (SQLException e) {
 			ExceptionLog(e);
@@ -584,7 +584,7 @@ public class MySQLCor {
 			prestmt.setString(7, string2);
 			
 			prestmt.executeUpdate();
-			System.out.println("insert successful~");
+			System.out.println(string + ":" + "insert successful~");
 	
 		} catch (SQLException e) {
 			ExceptionLog(e);
