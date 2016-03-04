@@ -69,6 +69,7 @@ public class Top {
 			for(int i = arraycount; i < files.length; i++){
 				OneParser parser = new OneParser(files[i], mysql,j);
 				try {
+					
 					int mark = parser.parse();
 					if (mark == 0) {
 						System.out.println("此处已删除" + k + "个乱码项目------------");

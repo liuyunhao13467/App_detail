@@ -14,11 +14,16 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.mysql.jdbc.log.Log;
 import com.mysql.jdbc.log.LogUtils;
 
 import tree.database.MySQLCor;
+import tree.parse.entity.ApkEntity;
+import tree.parse.entity.Callee;
+import tree.parse.entity.Caller;
 
 public class OneParser {
 	private File file;
@@ -49,25 +54,256 @@ public class OneParser {
 
 	public int parseSimpleSeperate() {
 		// TODO
-		// 对每个文件中的字符串进行处理，主要讲字符串中一个一个单位进行分离。
 		String ownpack[] = null;
 		StringBuffer apk = null;
+		Iterator<File> it = null;
+		ApkEntity apkInfo =null;
+		Logger log = Logger.getLogger("parseSimple");
+		
 		int mark = listFiles();
 
 		if (mark == 0) {
 			return 0;
 		}
-
-		ownpack = listOwnPackages();
-		   
-		   //获得 apk 名字， 输入方法名， 输出方法名
 		
-
+		apkInfo = ApkEntity.getInstance();
+		 //获得 apk 名字， 输入方法名， 输出方法名
+		ownpack = listOwnPackages();
 		apk = new StringBuffer(file.getName());
-		//
+		apkInfo.setApkName(apk.toString());
+		
+		log.log(Level.INFO, "the apk name is : " + apk.toString());
+		
+		it = filelist.iterator();
+		
+		// 对每个文件中的字符串进行处理，主要讲字符串中一个一个单位进行分离。
+		while (it.hasNext()) {
+			File f = it.next();
 
-		// 进行数据库操作，数据结构存储，集体进行数据库操作，批次处理。
+			try {
+				BufferedReader br = new BufferedReader(new InputStreamReader(
+						new FileInputStream(f)));
+				StringBuffer line = new StringBuffer();
+				StringBuffer classsig = new StringBuffer(), packagename = new StringBuffer();
+				String linestr = "";
+				log.log(Level.INFO, "the file name is : " + f.getName());
+				
+				while ((linestr = br.readLine()) != null) {
+					line = new StringBuffer(linestr);
+					line.trimToSize();
 
+					if (line.toString().startsWith(".class")) {
+						StringBuffer sclassname = parseClassName(line);
+						classsig = stanClassSig(sclassname);
+						packagename = stanPackageName(classsig);
+
+						continue;
+					}
+
+					if (line.toString().startsWith(".method")) {
+						//TODO 
+						apkInfo.setCallerList(new LinkedList<Caller>());
+						Caller callerTmp = new Caller();
+						
+						StringBuffer smethodname = parseMethodName(line);
+						StringBuffer mname = new StringBuffer(smethodname
+								.substring(0, smethodname.indexOf("(")));
+
+						StringBuffer returntype = new StringBuffer(smethodname
+								.substring((smethodname.lastIndexOf(")") + 1)));
+						returntype.trimToSize();
+						returntype = parseRType(returntype);
+						
+						//TODO 
+						callerTmp.setReturnType(returntype.toString());
+
+						StringBuffer args = new StringBuffer(smethodname
+								.substring((smethodname.indexOf("(") + 1),
+										smethodname.lastIndexOf(")")));
+						args.trimToSize();
+
+						if ((args.length() == 0)
+								|| ((smethodname.indexOf("(") + 1) == smethodname
+										.lastIndexOf(")"))) {
+							args = new StringBuffer("()");
+
+							// 无参数 处理 不插参数 不插method参数
+						} else {
+							args = (new StringBuffer("(")).append(
+									parseArgs(args)).append(")");
+
+							// 有参数处理 split 循环插入 直到插完为止
+						}
+
+						StringBuffer methodsig = new StringBuffer();
+						methodsig = methodsig.append(apk.toString()).append(
+								": ").append(classsig).append(": ").append(
+								returntype).append(" ").append(mname).append(
+								args);
+						
+						//TODO 
+						callerTmp.setMethodName(methodsig.toString());
+
+                        //按照属于自己的包，插入数据结构。
+						callerTmp.setMethodType("own");
+						apkInfo.getCallerList().add(callerTmp);
+						callerTmp.setCalleeList(new LinkedList<Callee>());
+
+						//TODO  插每一个 被调方法
+						while ((!((linestr = ((br.readLine()).trim()))
+								.equals(".end method")))
+								&& (linestr != null)) {
+
+							//TODO 创建被调用者信息。
+							Callee  calleeTmp = new Callee();
+							
+							
+							line = new StringBuffer(linestr);
+							line.trimToSize();
+
+							StringBuffer invokemethodsig = new StringBuffer();
+
+							if (line.toString().startsWith("invoke")) {
+								StringBuffer invokeclassname = parseInvokeClassName(line);
+								StringBuffer invokemethodname = parseInvokeMethodName(line);
+
+								line = null;
+
+								StringBuffer inclasssig = stanClassSig(invokeclassname);
+								StringBuffer inpackagename = stanPackageName(inclasssig); // 这里对
+																							// inpackagename
+																							// 进行判断
+								StringBuffer inclassname = stanClassName(inclasssig);
+
+								invokeclassname = null;
+
+								StringBuffer inmname = new StringBuffer(
+										invokemethodname.substring(0,
+												invokemethodname.indexOf("(")));
+
+								// 特殊情况clone
+								if ("clone".equals(inmname)) {
+									inpackagename = new StringBuffer(
+											inpackagename.substring(1));
+									inclasssig = new StringBuffer(inclasssig
+											.substring(1));
+								}
+
+								StringBuffer inreturntype = new StringBuffer(
+										invokemethodname
+												.substring((invokemethodname
+														.lastIndexOf(")") + 1)));
+								inreturntype.trimToSize();
+								inreturntype = parseRType(inreturntype);
+								// TODO
+								calleeTmp.setReturnType(inreturntype.toString()); 
+
+								StringBuffer inargs = new StringBuffer(
+										invokemethodname
+												.substring(
+														(invokemethodname
+																.indexOf("(") + 1),
+														invokemethodname
+																.lastIndexOf(")")));
+								inargs.trimToSize();
+
+								if ((inargs.length() == 0)
+										|| ((invokemethodname.indexOf("(") + 1) == invokemethodname
+												.lastIndexOf(")"))) {
+									inargs = new StringBuffer("()");
+								} else {
+									inargs = (new StringBuffer("(")).append(
+											parseArgs(inargs)).append(")");
+								}
+
+								if (isAndroid(inpackagename)) {
+									invokemethodsig = invokemethodsig.append(
+											"android").append(": ").append(
+											inclasssig).append(": ").append(
+											inreturntype).append(" ").append(
+											inmname).append(inargs);
+								// TODO 
+									calleeTmp.setMethodType("android");
+									calleeTmp.setMethodName(invokemethodsig.toString());
+									callerTmp.getCalleeList().add(calleeTmp);
+								}
+
+								else if (isJava(inpackagename)) {
+									invokemethodsig = invokemethodsig.append(
+											"java").append(": ").append(
+											inclasssig).append(": ").append(
+											inreturntype).append(" ").append(
+											inmname).append(inargs);
+									//TODO
+									//存入数据结构
+									calleeTmp.setMethodType("java");
+									calleeTmp.setMethodName(invokemethodsig.toString());
+									callerTmp.getCalleeList().add(calleeTmp);
+
+								}
+
+								else if (isOwn(inpackagename, ownpack)) {
+									invokemethodsig = invokemethodsig.append(
+											apk.toString()).append(": ")
+											.append(inclasssig).append(": ")
+											.append(inreturntype).append(" ")
+											.append(inmname).append(inargs);
+									//TODO
+									calleeTmp.setMethodType("own");
+									calleeTmp.setMethodName(invokemethodsig.toString());
+									callerTmp.getCalleeList().add(calleeTmp);
+								}
+
+								else {
+									invokemethodsig = invokemethodsig.append(
+											"thirdpackage").append(": ")
+											.append(inclasssig).append(": ")
+											.append(inreturntype).append(" ")
+											.append(inmname).append(inargs);
+								//TODO
+									calleeTmp.setMethodType("thirdpackage");
+									calleeTmp.setMethodName(invokemethodsig.toString());
+									callerTmp.getCalleeList().add(calleeTmp);
+								}
+							}
+						}
+					}
+				}
+			} catch (Exception e) {
+				StringBuffer write = new StringBuffer(
+						"F:\\app_detail\\exception.txt");
+				try {
+					BufferedWriter writer = new BufferedWriter(new FileWriter(
+							new File(write.toString()), true));
+					writer.write("apkname: " + apk.toString());
+					writer.newLine();
+					writer.write("smalifilename: " + f.getName());
+					writer.newLine();
+
+					writer.write("e.getMessage(): " + e.getMessage());
+					writer.newLine();
+					e.printStackTrace();
+
+					writer.close();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}
+		
+			
+			
+			
+		}
+
+		// 释放链表空间　
+		filelist.clear();
+		filelist = null;
+		//TODO　进行数据库操作，数据结构存储，集体进行数据库操作，批次处理。
+		
+		//TODO 清空apk相关的信息。
+		apkInfo.clear();
+		return 1;
+		
 	}
 
 	public int parse() {
