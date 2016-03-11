@@ -6,6 +6,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
 
+import tree.parse.entity.ApkEntity;
+import tree.parse.entity.Callee;
+import tree.parse.entity.Caller;
+
 public class MySQLCor {
 	
     private String dbUrl = "";
@@ -585,6 +589,53 @@ public class MySQLCor {
 			
 			prestmt.executeUpdate();
 			System.out.println(string + ":" + "insert successful~");
+	
+		} catch (SQLException e) {
+			ExceptionLog(e);
+		}		
+
+	}
+	/**
+	 * 将一个apk的信息，从内存中转移到数据库中。
+	 * @param apkInfo
+	 * @param insertWhole
+	 */
+	public void insertWholeBasicInfo(ApkEntity apkInfo,String insertWhole) {
+//下面数字对应的含义如下：
+//   1: callerApkVersion, 2 ： callerApkName ， 3 ： calllerPackageName ，4：callerClassName , 5：callerMethodName 
+//	 6： callerMethodType ,7： callerRreturnType , 8：callerParameter
+//	 9：calleeApkVersion , 10 ：calleeApkName , 11 ：calleePackageName　,　12　：calleeClassName　,13　：calleeMethodName,
+//	　14:calleeMethodType ,15 :calleeRreturnType , 16:calleeParameter
+		try {
+			PreparedStatement prestmt = con.prepareStatement(insertWhole);
+			
+			for(Caller caller :apkInfo.getCallerList()){
+				prestmt.setString(1, apkInfo.getApkVersion());
+				prestmt.setString(2, apkInfo.getApkName());
+				prestmt.setString(3, caller.getPackageName());
+				prestmt.setString(4, caller.getClassName());
+				prestmt.setString(5, caller.getMethodName());
+				prestmt.setString(6, caller.getMethodType());
+				prestmt.setString(7, caller.getReturnType());
+				prestmt.setString(8, caller.getParameter());
+				
+				for(Callee callee : caller.getCalleeList()){
+					prestmt.setString(9, apkInfo.getApkVersion());
+					prestmt.setString(10, apkInfo.getApkName());
+					prestmt.setString(11, callee.getPackageName());
+					prestmt.setString(12, callee.getClassName());
+					prestmt.setString(13, callee.getMethodName());
+					prestmt.setString(14, callee.getMethodType());
+					prestmt.setString(15, callee.getReturnType());
+					prestmt.setString(16, callee.getParameter());
+					
+				}
+				prestmt.addBatch();
+			}
+			
+			prestmt.executeBatch();
+			prestmt.close();
+			System.out.println( apkInfo.getApkName() +  "insert successful~");
 	
 		} catch (SQLException e) {
 			ExceptionLog(e);

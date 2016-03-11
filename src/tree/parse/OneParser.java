@@ -22,6 +22,7 @@ import com.mysql.jdbc.log.LogUtils;
 
 import tree.database.MySQLCor;
 import tree.parse.entity.ApkEntity;
+import tree.parse.entity.CallBase;
 import tree.parse.entity.Callee;
 import tree.parse.entity.Caller;
 
@@ -53,12 +54,17 @@ public class OneParser {
 	}
 
 	public int parseSimpleSeperate() {
-		// TODO
 		String ownpack[] = null;
 		StringBuffer apk = null;
 		Iterator<File> it = null;
 		ApkEntity apkInfo =null;
 		Logger log = Logger.getLogger("parseSimple");
+		
+		//将解析出来的全部信息，存入数据库中。（16个参数）
+		String inWholeInfo = "insert into whole_apk_info (callerApkVersion,callerApkName,callerPackageName,callerClassName,callerMethodName" +
+				",callerMethodType,callerRreturnType,callerParameter," +
+				"calleeApkVersion,calleeApkName,calleePackageName,calleeClassName,calleeMethodName,calleeMethodType," +
+				"calleeRreturnType,calleeParameter) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"; 
 		
 		int mark = listFiles();
 
@@ -71,6 +77,19 @@ public class OneParser {
 		ownpack = listOwnPackages();
 		apk = new StringBuffer(file.getName());
 		apkInfo.setApkName(apk.toString());
+		
+		// 先看看是否apk已经存在于 数据库中。
+		String exist = "select apkid from app_info where apkname = ?";
+		ResultSet ex = mysql.select(exist, apk.toString());
+		try {
+			if (ex.next()) {
+				System.out.println("apk已存在");
+				return 0;
+			}
+		} catch (SQLException e2) {
+			e2.printStackTrace();
+		}
+		//TODO apk版本信息。
 		
 		log.log(Level.INFO, "the apk name is : " + apk.toString());
 		
@@ -113,9 +132,6 @@ public class OneParser {
 								.substring((smethodname.lastIndexOf(")") + 1)));
 						returntype.trimToSize();
 						returntype = parseRType(returntype);
-						
-						//TODO 
-						callerTmp.setReturnType(returntype.toString());
 
 						StringBuffer args = new StringBuffer(smethodname
 								.substring((smethodname.indexOf("(") + 1),
@@ -141,11 +157,10 @@ public class OneParser {
 								returntype).append(" ").append(mname).append(
 								args);
 						
-						//TODO 
-						callerTmp.setMethodName(methodsig.toString());
+						//向caller 中存入信息。
+						setCallBase(callerTmp, packagename, classsig, mname, new StringBuffer("own"), returntype, args);
 
                         //按照属于自己的包，插入数据结构。
-						callerTmp.setMethodType("own");
 						apkInfo.getCallerList().add(callerTmp);
 						callerTmp.setCalleeList(new LinkedList<Callee>());
 
@@ -154,10 +169,8 @@ public class OneParser {
 								.equals(".end method")))
 								&& (linestr != null)) {
 
-							//TODO 创建被调用者信息。
+							//创建被调用者信息。
 							Callee  calleeTmp = new Callee();
-							
-							
 							line = new StringBuffer(linestr);
 							line.trimToSize();
 
@@ -195,8 +208,6 @@ public class OneParser {
 														.lastIndexOf(")") + 1)));
 								inreturntype.trimToSize();
 								inreturntype = parseRType(inreturntype);
-								// TODO
-								calleeTmp.setReturnType(inreturntype.toString()); 
 
 								StringBuffer inargs = new StringBuffer(
 										invokemethodname
@@ -223,8 +234,7 @@ public class OneParser {
 											inreturntype).append(" ").append(
 											inmname).append(inargs);
 								// TODO 
-									calleeTmp.setMethodType("android");
-									calleeTmp.setMethodName(invokemethodsig.toString());
+									setCallBase(calleeTmp, inpackagename, inclasssig, inmname, new StringBuffer("android"), inreturntype, inargs);
 									callerTmp.getCalleeList().add(calleeTmp);
 								}
 
@@ -234,10 +244,8 @@ public class OneParser {
 											inclasssig).append(": ").append(
 											inreturntype).append(" ").append(
 											inmname).append(inargs);
-									//TODO
-									//存入数据结构
-									calleeTmp.setMethodType("java");
-									calleeTmp.setMethodName(invokemethodsig.toString());
+									// 存入数据结构
+									setCallBase(calleeTmp, inpackagename, inclasssig, inmname, new StringBuffer("java"), inreturntype, inargs);
 									callerTmp.getCalleeList().add(calleeTmp);
 
 								}
@@ -248,9 +256,8 @@ public class OneParser {
 											.append(inclasssig).append(": ")
 											.append(inreturntype).append(" ")
 											.append(inmname).append(inargs);
-									//TODO
-									calleeTmp.setMethodType("own");
-									calleeTmp.setMethodName(invokemethodsig.toString());
+									
+									setCallBase(calleeTmp, inpackagename, inclasssig, inmname, new StringBuffer("own"), inreturntype, inargs);
 									callerTmp.getCalleeList().add(calleeTmp);
 								}
 
@@ -260,9 +267,8 @@ public class OneParser {
 											.append(inclasssig).append(": ")
 											.append(inreturntype).append(" ")
 											.append(inmname).append(inargs);
-								//TODO
-									calleeTmp.setMethodType("thirdpackage");
-									calleeTmp.setMethodName(invokemethodsig.toString());
+								
+									setCallBase(calleeTmp, inpackagename, inclasssig, inmname, new StringBuffer("thirdpackage"), inreturntype, inargs);
 									callerTmp.getCalleeList().add(calleeTmp);
 								}
 							}
@@ -299,6 +305,7 @@ public class OneParser {
 		filelist.clear();
 		filelist = null;
 		//TODO　进行数据库操作，数据结构存储，集体进行数据库操作，批次处理。
+		mysql.insertWholeBasicInfo(apkInfo, inWholeInfo);
 		
 		//TODO 清空apk相关的信息。
 		apkInfo.clear();
@@ -1325,4 +1332,35 @@ public class OneParser {
 			return 0;
 		return 1;
 	}
+
+	
+/**
+ * 用来向caller 或者 callee中存入数据。
+ * @param callBase
+ * @param packageName
+ * @param className
+ * @param methodName
+ * @param methodType
+ * @param returnType
+ * @param parameter
+ */
+    private void  setCallBase(CallBase callBase,StringBuffer packageName,StringBuffer className,StringBuffer methodName,
+    		StringBuffer methodType,StringBuffer returnType,StringBuffer parameter){
+    	callBase.setPackageName(packageName.toString());
+		callBase.setClassName(className.toString());
+		callBase.setMethodName(methodName.toString());
+		callBase.setMethodType(methodType.toString());
+		callBase.setReturnType(returnType.toString()); 
+		callBase.setParameter(parameter.toString());
+    }
+    
+    /**
+     * 将一个apk完全解析后的信息放进数据库中。
+     * @param apkInfo
+     * @param sql
+     */
+    private void sendDataToDB(ApkEntity apkInfo,MySQLCor sql){
+    	
+    	
+    }
 }
