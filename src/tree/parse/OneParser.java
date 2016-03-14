@@ -77,9 +77,10 @@ public class OneParser {
 		ownpack = listOwnPackages();
 		apk = new StringBuffer(file.getName());
 		apkInfo.setApkName(apk.toString());
+		apkInfo.setCallerList(new LinkedList<Caller>());
 		
 		// 先看看是否apk已经存在于 数据库中。
-		String exist = "select apkid from app_info where apkname = ?";
+		String exist = "select callerApkName from whole_apk_info where callerApkName = ?";
 		ResultSet ex = mysql.select(exist, apk.toString());
 		try {
 			if (ex.next()) {
@@ -121,7 +122,6 @@ public class OneParser {
 
 					if (line.toString().startsWith(".method")) {
 						//TODO 
-						apkInfo.setCallerList(new LinkedList<Caller>());
 						Caller callerTmp = new Caller();
 						
 						StringBuffer smethodname = parseMethodName(line);
@@ -161,8 +161,9 @@ public class OneParser {
 						setCallBase(callerTmp, packagename, classsig, mname, new StringBuffer("own"), returntype, args);
 
                         //按照属于自己的包，插入数据结构。
-						apkInfo.getCallerList().add(callerTmp);
 						callerTmp.setCalleeList(new LinkedList<Callee>());
+						apkInfo.getCallerList().add(callerTmp);
+						
 
 						//TODO  插每一个 被调方法
 						while ((!((linestr = ((br.readLine()).trim()))
@@ -244,7 +245,7 @@ public class OneParser {
 											inclasssig).append(": ").append(
 											inreturntype).append(" ").append(
 											inmname).append(inargs);
-									// 存入数据结构
+									//  存入数据结构
 									setCallBase(calleeTmp, inpackagename, inclasssig, inmname, new StringBuffer("java"), inreturntype, inargs);
 									callerTmp.getCalleeList().add(calleeTmp);
 
@@ -306,6 +307,7 @@ public class OneParser {
 		filelist = null;
 		//TODO　进行数据库操作，数据结构存储，集体进行数据库操作，批次处理。
 		mysql.insertWholeBasicInfo(apkInfo, inWholeInfo);
+		
 		
 		//TODO 清空apk相关的信息。
 		apkInfo.clear();
