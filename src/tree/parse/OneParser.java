@@ -77,6 +77,7 @@ public class OneParser {
 		ownpack = listOwnPackages();
 		apk = new StringBuffer(file.getName());
 		apkInfo.setApkName(apk.toString());
+		apkInfo.setApkVersion(stanAppVersion(apk));
 		apkInfo.setCallerList(new LinkedList<Caller>());
 		
 		// 先看看是否apk已经存在于 数据库中。
@@ -1314,6 +1315,16 @@ public class OneParser {
 		return sclassname;
 	}
 
+    private String stanAppVersion(StringBuffer appName){
+    	//TODO 解析出version.
+    	String str_version = appName.toString() ;
+		String[] goal = str_version.split("-");
+		if(goal[1] != null && goal[1] != ""){
+			return goal[1];
+		}else{
+			return null;
+		}
+    }	
 	private StringBuffer parseClassName(StringBuffer line) {
 		StringBuffer classname = new StringBuffer((line.substring(7, (line
 				.length()) - 1)));
