@@ -81,6 +81,19 @@ public class MySQLCor {
 		return rs;
 	}
 	
+	 
+	public ResultSet selectApkID(String sql,String apkName,String apkVersion){
+		ResultSet rs = null;
+		try {
+			PreparedStatement prestmt = con.prepareStatement(sql);
+			prestmt.setString(1, apkName);
+			prestmt.setString(2, apkVersion);
+			rs = prestmt.executeQuery();
+		} catch (SQLException e) {
+			ExceptionLog(e);
+		}
+		return rs;
+	}
 	public ResultSet select(String sql,String classname,String sig){
 		ResultSet rs = null;
 		try {

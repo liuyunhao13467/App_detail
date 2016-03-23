@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.mysql.jdbc.StringUtils;
+
 
 public class testContinuity {
 
@@ -36,9 +38,12 @@ public class testContinuity {
     public static boolean isOrdered(String s){  
         boolean flag=false;  
         //当s为空字符串或者null,认为不是由同一字符构成的  
-        if(StringUtils.isNullOrEmpty(s)){  
-            return flag;  
-        }  
+        if(s==null||s.equals("")){
+        	return flag;
+        }
+//        if(StringUtils.isNullOrEmpty(s)){  
+//            return flag;  
+//        }  
         //当只有一个字符的时候，认为由同一字符构成  
         if(1==s.length()){  
             flag=true;  

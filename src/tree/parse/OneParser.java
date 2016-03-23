@@ -61,7 +61,7 @@ public class OneParser {
 		Logger log = Logger.getLogger("parseSimple");
 		
 		//将解析出来的全部信息，存入数据库中。（16个参数）
-		String inWholeInfo = "insert into whole_apk_info (callerApkVersion,callerApkName,callerPackageName,callerClassName,callerMethodName" +
+		String inWholeInfo = "insert into call_info_wang (callerApkVersion,callerApkName,callerPackageName,callerClassName,callerMethodName" +
 				",callerMethodType,callerRreturnType,callerParameter," +
 				"calleeApkVersion,calleeApkName,calleePackageName,calleeClassName,calleeMethodName,calleeMethodType," +
 				"calleeRreturnType,calleeParameter) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"; 
@@ -76,13 +76,20 @@ public class OneParser {
 		 //获得 apk 名字， 输入方法名， 输出方法名
 		ownpack = listOwnPackages();
 		apk = new StringBuffer(file.getName());
-		apkInfo.setApkName(apk.toString());
-		apkInfo.setApkVersion(stanAppVersion(apk));
+		String []apkNameAndVersion = stanAppVersionAndName(apk);
+		
+		if(apkNameAndVersion != null){
+			apkInfo.setApkName(apkNameAndVersion[0]);
+			apkInfo.setApkVersion(apkNameAndVersion[1]);
+		}else{
+			return 0;
+		}
+		
 		apkInfo.setCallerList(new LinkedList<Caller>());
 		
 		// 先看看是否apk已经存在于 数据库中。
-		String exist = "select callerApkName from whole_apk_info where callerApkName = ?";
-		ResultSet ex = mysql.select(exist, apk.toString());
+		String exist = "select callerApkName from call_info_wang where callerApkName = ? and callerApkVersion = ?";
+		ResultSet ex = mysql.selectApkID(exist, apkNameAndVersion[0],apkNameAndVersion[1]);
 		try {
 			if (ex.next()) {
 				System.out.println("apk已存在");
@@ -1315,12 +1322,12 @@ public class OneParser {
 		return sclassname;
 	}
 
-    private String stanAppVersion(StringBuffer appName){
+    private String[] stanAppVersionAndName(StringBuffer appName){
     	//TODO 解析出version.
     	String str_version = appName.toString() ;
 		String[] goal = str_version.split("-");
-		if(goal[1] != null && goal[1] != ""){
-			return goal[1];
+		if(goal != null && goal.length ==2){
+			return goal;
 		}else{
 			return null;
 		}
